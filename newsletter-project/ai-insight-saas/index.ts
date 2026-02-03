@@ -45,18 +45,26 @@ app.get('/', (c) => {
                     Llama-3 인공지능이 매일 수천 개의 기사를 분석하여 가장 가치 있는 정보만 요약해 드립니다. 🐾
                 </p>
                 
-                <form action="/subscribe" method="POST" class="flex flex-col sm:flex-row gap-3">
-                    <input type="email" name="email" placeholder="이메일 주소를 입력하세요" required
-                        class="flex-1 px-5 py-4 rounded-2xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 shadow-sm outline-none transition-all">
-                    <button type="submit" 
-                        class="px-8 py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-slate-200">
-                        구독하기
-                    </button>
-                </form>
+                <div class="flex flex-col space-y-3">
+                    <form action="/subscribe" method="POST" class="flex flex-col sm:flex-row gap-3">
+                        <input type="email" name="email" placeholder="이메일 주소를 입력하세요" required
+                            class="flex-1 px-5 py-4 rounded-2xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 shadow-sm outline-none transition-all">
+                        <button type="submit" 
+                            class="px-8 py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-slate-200">
+                            구독하기
+                        </button>
+                    </form>
+                    <div class="flex items-center justify-center sm:justify-start">
+                        <button onclick="document.getElementById('preview-section').scrollIntoView({behavior: 'smooth'})" 
+                            class="text-slate-500 hover:text-blue-600 text-sm font-medium transition-colors flex items-center group">
+                            먼저 둘러볼게요 <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Preview Card -->
-            <div class="glass border border-white rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+            <div id="preview-section" class="glass border border-white rounded-3xl p-8 shadow-2xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 p-4">
                     <i class="fa-solid fa-quote-right text-slate-100 text-6xl"></i>
                 </div>
