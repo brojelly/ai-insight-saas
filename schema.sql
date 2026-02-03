@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS news_summaries;
+CREATE TABLE news_summaries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  category TEXT,
+  url TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

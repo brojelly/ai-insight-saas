@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 뉴스 요약 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .ads-placeholder { background: #f3f4f6; border: 2px dashed #d1d5db; min-height: 100px; display: flex; align-items: center; justify-content: center; margin: 20px 0; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div class="max-w-4xl mx-auto p-6">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-blue-600">🐾 AI Daily News</h1>
+            <p class="text-gray-600">매일 아침 배달되는 핵심 뉴스 요약</p>
+        </header>
+
+        <!-- 상단 광고 영역 -->
+        <div class="ads-placeholder">
+            <p class="text-gray-400 text-sm">Google AdSense 광고 영역 (승인 후 코드 삽입)</p>
+        </div>
+
+        <main id="news-container" class="space-y-6">
+            <div class="animate-pulse flex space-x-4">
+                <div class="flex-1 space-y-4 py-1">
+                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div class="space-y-2">
+                        <div class="h-4 bg-gray-200 rounded"></div>
+                        <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="mt-12 pt-8 border-t text-center text-gray-500 text-sm">
+            &copy; 2026 AI 뉴스 요약 대시보드 | <a href="/privacy" class="underline">개인정보처리방침</a>
+        </footer>
+    </div>
+
+    <script>
+        async function fetchNews() {
+            try {
+                // 여기에 Cloudflare Worker URL을 입력합니다.
+                const response = await fetch('YOUR_WORKER_URL_HERE');
+                const data = await response.json();
+                const container = document.getElementById('news-container');
+                container.innerHTML = data.map(news => `
+                    <article class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                        <span class="text-xs font-semibold text-blue-500 uppercase">${news.category}</span>
+                        <h2 class="text-xl font-bold mt-1 mb-3">${news.title}</h2>
+                        <p class="text-gray-700 leading-relaxed">${news.summary}</p>
+                        <div class="mt-4 text-xs text-gray-400">${new Date(news.created_at).toLocaleString()}</div>
+                    </article>
+                `).join('');
+            } catch (e) {
+                console.error("데이터 로딩 실패", e);
+            }
+        }
+        // fetchNews(); // 실제 배포 후 주석 해제
+    </script>
+</body>
+</html>
