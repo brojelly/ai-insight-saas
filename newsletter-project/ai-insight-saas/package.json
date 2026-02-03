@@ -1,0 +1,23 @@
+{
+  "name": "ai-insight-saas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brojelly/ai-insight-saas.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/brojelly/ai-insight-saas/issues"
+  },
+  "homepage": "https://github.com/brojelly/ai-insight-saas#readme",
+  "dependencies": {
+    "hono": "^4.11.7"
+  }
+}

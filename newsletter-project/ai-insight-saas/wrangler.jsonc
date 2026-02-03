@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ai-insight-saas",
+  "main": "index.ts",
+  "compatibility_date": "2025-02-01",
+  "observability": {
+    "enabled": true
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ai-insight-db",
+      "database_id": "93147c2f-820a-424c-83e9-8f354dfb1689"
+    }
+  ]
+}
