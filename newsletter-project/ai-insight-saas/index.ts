@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { ai } from 'hono/ai'
 
 type Bindings = {
   DB: D1Database
@@ -8,7 +7,14 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-// 1. UI 및 구독 폼
+// RSS 피드 목록 (AI 관련)
+const RSS_FEEDS = [
+  'https://techcrunch.com/category/artificial-intelligence/feed/',
+  'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml',
+  'https://wired.com/feed/category/business/latest/rss'
+]
+
+// 1. 메인 UI
 app.get('/', (c) => {
   return c.html(`
     <!DOCTYPE html>
@@ -27,24 +33,21 @@ app.get('/', (c) => {
     </head>
     <body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen flex items-center justify-center p-4">
         <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            
-            <!-- Hero Section -->
             <div class="space-y-6">
                 <div class="inline-flex items-center space-x-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
                     <span class="relative flex h-2 w-2">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                     </span>
-                    <span>AI-Powered News</span>
+                    <span>Real-time AI News</span>
                 </div>
                 <h1 class="text-5xl font-extrabold text-slate-900 leading-tight">
-                    쏟아지는 뉴스 속,<br>
-                    <span class="text-blue-600">핵심만</span> 쏙쏙.
+                    쏟아지는 AI 소식,<br>
+                    <span class="text-blue-600">핵심만</span> 요약.
                 </h1>
                 <p class="text-lg text-slate-600 leading-relaxed">
-                    Llama-3 인공지능이 매일 수천 개의 기사를 분석하여 가장 가치 있는 정보만 요약해 드립니다. 🐾
+                    전 세계 주요 매체의 AI 소식을 수집하여 Llama-3가 단 한 문장으로 명쾌하게 요약해 드립니다. 🐾
                 </p>
-                
                 <div class="flex flex-col space-y-3">
                     <form action="/subscribe" method="POST" class="flex flex-col sm:flex-row gap-3">
                         <input type="email" name="email" placeholder="이메일 주소를 입력하세요" required
@@ -63,37 +66,35 @@ app.get('/', (c) => {
                 </div>
             </div>
 
-            <!-- Preview Card -->
-            <div id="preview-section" class="glass border border-white rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+            <div id="preview-section" class="glass border border-white rounded-3xl p-8 shadow-2xl relative overflow-hidden min-h-[300px] flex flex-col justify-between">
                 <div class="absolute top-0 right-0 p-4">
                     <i class="fa-solid fa-quote-right text-slate-100 text-6xl"></i>
                 </div>
-                
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center">
-                    <i class="fa-solid fa-bolt-lightning mr-2 text-yellow-400"></i> 오늘의 AI 인사이트
-                </h2>
-                
-                <div id="latest-news" class="space-y-4">
-                    <div class="animate-pulse space-y-3">
-                        <div class="h-4 bg-slate-200 rounded w-3/4"></div>
-                        <div class="h-4 bg-slate-200 rounded"></div>
-                        <div class="h-4 bg-slate-200 rounded w-5/6"></div>
+                <div>
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center">
+                        <i class="fa-solid fa-bolt-lightning mr-2 text-yellow-400"></i> 오늘의 실시간 AI 인사이트
+                    </h2>
+                    <div id="latest-news" class="space-y-4">
+                        <div class="animate-pulse space-y-3">
+                            <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+                            <div class="h-4 bg-slate-200 rounded"></div>
+                        </div>
                     </div>
                 </div>
-
                 <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">C</div>
                         <div>
-                            <p class="text-sm font-bold text-slate-900">Claw AI Assistant</p>
-                            <p class="text-xs text-slate-400">Chief Content Officer</p>
+                            <p class="text-sm font-bold text-slate-900">Claw AI Newsroom</p>
+                            <p class="text-xs text-slate-400">Llama-3 Analytics</p>
                         </div>
                     </div>
-                    <span class="text-xs font-medium bg-slate-100 text-slate-500 px-2 py-1 rounded">2026.02.03</span>
+                    <button onclick="location.reload()" class="text-slate-400 hover:text-blue-500 transition-colors">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
                 </div>
             </div>
         </div>
-
         <script>
             fetch('/api/latest-news')
                 .then(res => res.json())
@@ -103,11 +104,14 @@ app.get('/', (c) => {
                         container.innerHTML = \`
                             <h3 class="text-xl font-bold text-slate-900 mb-2">\${data.title}</h3>
                             <p class="text-slate-600 leading-relaxed">\${data.summary}</p>
+                            <a href="\${data.url}" target="_blank" class="text-blue-500 text-sm hover:underline flex items-center mt-2">
+                                원문 보기 <i class="fa-solid fa-external-link ml-1 text-[10px]"></i>
+                            </a>
                         \`;
                     } else {
                         container.innerHTML = \`
                             <div class="text-center py-8">
-                                <p class="text-slate-400 italic">아직 오늘의 뉴스가 도착하지 않았습니다.</p>
+                                <p class="text-slate-400 italic">뉴스를 가져오는 중입니다. 잠시만 기다려주세요!</p>
                             </div>
                         \`;
                     }
@@ -118,17 +122,15 @@ app.get('/', (c) => {
   `)
 })
 
-// 2. 구독 API (DB 연동)
+// 2. 구독 API
 app.post('/subscribe', async (c) => {
   const { email } = await c.req.parseBody()
   try {
     await c.env.DB.prepare('INSERT INTO subscribers (email) VALUES (?)').bind(email).run()
     return c.text('구독해주셔서 감사합니다! 🐾')
   } catch (e: any) {
-    if (e.message.includes('UNIQUE')) {
-      return c.text('이미 구독 중인 이메일입니다. 😊')
-    }
-    return c.text('오류가 발생했습니다. 다시 시도해주세요.', 500)
+    if (e.message.includes('UNIQUE')) return c.text('이미 구독 중인 이메일입니다. 😊')
+    return c.text('오류 발생', 500)
   }
 })
 
@@ -138,22 +140,37 @@ app.get('/api/latest-news', async (c) => {
   return c.json(news)
 })
 
-// 4. 샘플 뉴스 생성 (AI 모델 사용)
-app.get('/generate-sample', async (c) => {
-  const prompt = "Generate a short, one-sentence interesting news summary about Artificial Intelligence in 2026."
+// 4. 진짜 뉴스 수집 및 AI 요약 (Fetch & AI)
+app.get('/fetch-news', async (c) => {
+  const feedUrl = RSS_FEEDS[Math.floor(Math.random() * RSS_FEEDS.length)]
   
-  const response = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
-    prompt: prompt
-  })
-  
-  const summary = (response as any).response || "AI 기술이 세상을 바꾸고 있습니다."
-  const title = "2026 AI 트렌드 리포트"
-  
-  await c.env.DB.prepare('INSERT INTO news_summaries (title, summary, category) VALUES (?, ?, ?)')
-    .bind(title, summary, 'Tech')
-    .run()
+  try {
+    const res = await fetch(feedUrl)
+    const xml = await res.text()
     
-  return c.text('샘플 뉴스가 생성되고 DB에 저장되었습니다! 🚀\n요약: ' + summary)
+    // 간단한 XML 파싱 (제목, 링크 추출)
+    const itemMatch = xml.match(/<item>([\s\S]*?)<\/item>/)
+    if (!itemMatch) return c.text('기사를 찾을 수 없습니다.')
+    
+    const item = itemMatch[1]
+    const title = item.match(/<title>(.*?)<\/title>/)?.[1].replace('<![CDATA[', '').replace(']]>', '') || '제목 없음'
+    const link = item.match(/<link>(.*?)<\/link>/)?.[1] || ''
+    const description = item.match(/<description>([\s\S]*?)<\/description>/)?.[1].replace(/<[^>]*>/g, '').substring(0, 500) || ''
+
+    // AI 요약 (한국어로 요약 요청)
+    const prompt = `Translate and summarize this AI news title and description into one concise Korean sentence: Title: ${title}, Description: ${description}`
+    const aiResponse = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', { prompt })
+    const summary = (aiResponse as any).response || title
+
+    // DB 저장 (중복 체크 없이 우선 저장)
+    await c.env.DB.prepare('INSERT INTO news_summaries (title, summary, url, category) VALUES (?, ?, ?, ?)')
+      .bind(title, summary, link, 'AI')
+      .run()
+
+    return c.json({ title, summary, link })
+  } catch (e: any) {
+    return c.text('Error: ' + e.message, 500)
+  }
 })
 
 export default app
