@@ -7,170 +7,221 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-// RSS 피드 목록 (AI 관련)
+const ADSENSE_PUB_ID = 'ca-pub-9958230062150527';
+
 const RSS_FEEDS = [
   'https://techcrunch.com/category/artificial-intelligence/feed/',
   'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml',
   'https://wired.com/feed/category/business/latest/rss'
 ]
 
-// 1. 메인 UI
+app.get('/ads.txt', (c) => {
+  return c.text(`google.com, ${ADSENSE_PUB_ID}, DIRECT, f08c47fec0942fa0`)
+})
+
 app.get('/', (c) => {
+  const country = c.req.raw.cf?.country || 'US';
+  const isKorea = country === 'KR';
+
   return c.html(`
     <!DOCTYPE html>
-    <html lang="ko">
+    <html lang="${isKorea ? 'ko' : 'en'}">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AI Insight - 지능형 뉴스레터</title>
+        <title>JellyAI - Global AI News & Tool Insight</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_PUB_ID}" crossorigin="anonymous"></script>
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-            body { font-family: 'Inter', sans-serif; }
-            .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+            @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
+            body { font-family: 'Pretendard', sans-serif; scroll-behavior: smooth; background-color: #f8fafc; }
+            .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+            .card-hover:hover { transform: translateY(-5px); transition: all 0.3s ease; }
+            #loading-spinner { display: none; }
+            #loading-spinner.active { display: flex; }
         </style>
     </head>
-    <body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen flex items-center justify-center p-4">
-        <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div class="space-y-6">
-                <div class="inline-flex items-center space-x-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-                    <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                    </span>
-                    <span>Real-time AI News</span>
-                </div>
-                <h1 class="text-5xl font-extrabold text-slate-900 leading-tight">
-                    쏟아지는 AI 소식,<br>
-                    <span class="text-blue-600">핵심만</span> 요약.
-                </h1>
-                <p class="text-lg text-slate-600 leading-relaxed">
-                    전 세계 주요 매체의 AI 소식을 수집하여 Llama-3가 단 한 문장으로 명쾌하게 요약해 드립니다. 🐾
-                </p>
-                <div class="flex flex-col space-y-3">
-                    <form action="/subscribe" method="POST" class="flex flex-col sm:flex-row gap-3">
-                        <input type="email" name="email" placeholder="이메일 주소를 입력하세요" required
-                            class="flex-1 px-5 py-4 rounded-2xl border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 shadow-sm outline-none transition-all">
-                        <button type="submit" 
-                            class="px-8 py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-slate-200">
-                            구독하기
-                        </button>
-                    </form>
-                    <div class="flex items-center justify-center sm:justify-start">
-                        <button onclick="document.getElementById('preview-section').scrollIntoView({behavior: 'smooth'})" 
-                            class="text-slate-500 hover:text-blue-600 text-sm font-medium transition-colors flex items-center group">
-                            먼저 둘러볼게요 <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
-                        </button>
-                    </div>
+    <body class="text-slate-900">
+        <nav class="sticky top-0 z-50 glass border-b border-slate-200 py-4 px-4">
+            <div class="max-w-6xl mx-auto flex justify-between items-center text-left">
+                <a href="/" class="text-2xl font-bold text-blue-600 flex items-center">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> JellyAI
+                </a>
+                <div class="hidden md:flex space-x-8 text-sm font-medium text-slate-600">
+                    <a href="#news-grid" class="hover:text-blue-600 transition">${isKorea ? '실시간 뉴스' : 'Live News'}</a>
+                    <a href="#hot-tool" class="hover:text-blue-600 transition">${isKorea ? '핫 AI 툴' : 'Hot AI Tool'}</a>
+                    <a href="/privacy" class="hover:text-blue-600 transition">Privacy</a>
                 </div>
             </div>
+        </nav>
 
-            <div id="preview-section" class="glass border border-white rounded-3xl p-8 shadow-2xl relative overflow-hidden min-h-[300px] flex flex-col justify-between">
-                <div class="absolute top-0 right-0 p-4">
-                    <i class="fa-solid fa-quote-right text-slate-100 text-6xl"></i>
+        <header class="max-w-4xl mx-auto px-4 py-20 text-center">
+            <h1 class="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
+                ${isKorea ? 'AI의 미래, 당신의 언어로.' : 'Future of AI, in Your Language.'}
+            </h1>
+            <p class="text-lg text-slate-500 mb-10 leading-relaxed">
+                ${isKorea ? '글로벌 AI 뉴스와 혁신적인 도구들을 한 곳에서 만나보세요.' : 'Global AI news and innovative tools, all in one place.'}
+            </p>
+        </header>
+
+        <main class="max-w-6xl mx-auto px-4 pb-24">
+            <section id="news-grid" class="mb-24">
+                <h2 class="text-2xl font-bold mb-10 flex items-center text-left">
+                    <i class="fa-solid fa-rss text-orange-400 mr-2"></i> ${isKorea ? '실시간 브리핑' : 'Global Briefing'}
+                </h2>
+                <div id="news-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"></div>
+                <div id="loading-spinner" class="py-12 justify-center items-center space-x-2">
+                    <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                    <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-.3s]"></div>
+                    <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce [animation-delay:-.5s]"></div>
                 </div>
-                <div>
-                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center">
-                        <i class="fa-solid fa-bolt-lightning mr-2 text-yellow-400"></i> 오늘의 실시간 AI 인사이트
-                    </h2>
-                    <div id="latest-news" class="space-y-4">
-                        <div class="animate-pulse space-y-3">
-                            <div class="h-4 bg-slate-200 rounded w-3/4"></div>
-                            <div class="h-4 bg-slate-200 rounded"></div>
-                        </div>
+                <div id="scroll-sentinel" class="h-10"></div>
+            </section>
+
+            <section id="hot-tool" class="mb-24">
+                <div class="bg-gradient-to-br from-slate-900 to-blue-900 rounded-[3rem] p-8 md:p-16 text-white overflow-hidden relative shadow-2xl">
+                    <div class="absolute top-0 right-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
+                        <i class="fa-solid fa-screwdriver-wrench text-[20rem]"></i>
                     </div>
-                </div>
-                <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">C</div>
-                        <div>
-                            <p class="text-sm font-bold text-slate-900">Claw AI Newsroom</p>
-                            <p class="text-xs text-slate-400">Llama-3 Analytics</p>
-                        </div>
-                    </div>
-                    <button onclick="location.reload()" class="text-slate-400 hover:text-blue-500 transition-colors">
-                        <i class="fa-solid fa-rotate-right"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <script>
-            fetch('/api/latest-news')
-                .then(res => res.json())
-                .then(data => {
-                    const container = document.getElementById('latest-news');
-                    if (data && data.title) {
-                        container.innerHTML = \`
-                            <h3 class="text-xl font-bold text-slate-900 mb-2">\${data.title}</h3>
-                            <p class="text-slate-600 leading-relaxed">\${data.summary}</p>
-                            <a href="\${data.url}" target="_blank" class="text-blue-500 text-sm hover:underline flex items-center mt-2">
-                                원문 보기 <i class="fa-solid fa-external-link ml-1 text-[10px]"></i>
-                            </a>
-                        \`;
-                    } else {
-                        container.innerHTML = \`
-                            <div class="text-center py-8">
-                                <p class="text-slate-400 italic">뉴스를 가져오는 중입니다. 잠시만 기다려주세요!</p>
+                    <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center text-left">
+                        <div id="tool-info" class="space-y-6 text-left">
+                            <span class="bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-full uppercase tracking-widest italic">Today's Hot Tool</span>
+                            <div class="animate-pulse space-y-4">
+                                <div class="h-10 bg-white/20 rounded w-1/2"></div>
+                                <div class="h-20 bg-white/10 rounded"></div>
                             </div>
-                        \`;
+                        </div>
+                        <div id="tool-how-to-container" class="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 space-y-6 text-left">
+                            <h3 class="text-xl font-bold border-b border-white/10 pb-4 flex items-center text-left">
+                                <i class="fa-solid fa-book-open mr-3"></i> ${isKorea ? '사용 가이드' : 'Quick Start'}
+                            </h3>
+                            <div id="tool-how-to-content" class="text-blue-100 text-sm leading-relaxed space-y-4 whitespace-pre-wrap mt-4 text-left">
+                                Loading guide...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="bg-slate-900 text-white py-12 px-4 text-center mt-20">
+            <p class="text-sm text-slate-500">&copy; 2026 JellyAI. | Made for Global AI Enthusiasts 🐾</p>
+        </footer>
+
+        <script>
+            const isKR = ${isKorea};
+            let currentPage = 1;
+            let isLoading = false;
+            let hasMore = true;
+
+            const loadNews = async () => {
+                if (isLoading || !hasMore) return;
+                isLoading = true;
+                document.getElementById('loading-spinner').classList.add('active');
+
+                try {
+                    const res = await fetch(\`/api/list-news?page=\${currentPage}\`);
+                    const data = await res.json();
+                    
+                    if (data && data.length > 0) {
+                        const container = document.getElementById('news-container');
+                        data.forEach(n => {
+                            const card = document.createElement('div');
+                            card.className = "bg-white rounded-[2.5rem] border border-slate-200 shadow-sm card-hover overflow-hidden flex flex-col text-left";
+                            card.innerHTML = \`
+                                \${n.image_url ? \`<img src="\${n.image_url}" class="w-full h-48 object-cover" alt="news thumbnail">\` : \`<div class="w-full h-48 bg-slate-100 flex items-center justify-center text-slate-300"><i class="fa-solid fa-image text-4xl"></i></div>\`}
+                                <div class="p-8 flex-1 flex flex-col justify-between">
+                                    <div>
+                                        <h3 class="text-lg font-bold mb-4 leading-tight text-left">\${n.title}</h3>
+                                        <p class="text-slate-500 text-sm leading-relaxed mb-8 text-left">\${isKR ? n.summary : (n.summary_en || n.summary)}</p>
+                                    </div>
+                                    <a href="\${n.url}" target="_blank" class="text-xs font-bold text-blue-600 hover:underline text-left">VIEW ARTICLE &rarr;</a>
+                                </div>
+                            \`;
+                            container.appendChild(card);
+                        });
+                        currentPage++;
+                        if (data.length < 12) hasMore = false;
+                    } else {
+                        hasMore = false;
                     }
-                });
+                } catch (e) {
+                    console.error("News load failed", e);
+                } finally {
+                    isLoading = false;
+                    document.getElementById('loading-spinner').classList.remove('active');
+                }
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) loadNews();
+            }, { threshold: 0.1 });
+            observer.observe(document.getElementById('scroll-sentinel'));
+
+            // FIX: Tool Info Loading
+            fetch('/api/hot-tool').then(r => r.json()).then(tool => {
+                if (tool) {
+                    document.getElementById('tool-info').innerHTML = \`
+                        <span class="bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-full uppercase tracking-widest italic">Today's Hot Tool</span>
+                        <h2 class="text-5xl font-black text-white text-left">\${tool.name}</h2>
+                        <p class="text-blue-100 text-lg leading-relaxed text-left">\${tool.description}</p>
+                        <a href="\${tool.link}" target="_blank" class="inline-block bg-white text-blue-900 px-8 py-4 rounded-2xl font-bold hover:bg-blue-50 transition shadow-xl text-left">
+                            \${isKR ? '지금 도구 보러가기' : 'Check out Tool'} <i class="fa-solid fa-external-link ml-2"></i>
+                        </a>
+                    \`;
+                    document.getElementById('tool-how-to-content').innerHTML = tool.how_to;
+                }
+            });
         </script>
     </body>
     </html>
   `)
 })
 
-// 2. 구독 API
+app.get('/api/list-news', async (c) => {
+  const page = parseInt(c.req.query('page') || '1');
+  const limit = 12;
+  const offset = (page - 1) * limit;
+  const news = await c.env.DB.prepare('SELECT * FROM news_summaries ORDER BY created_at DESC LIMIT ? OFFSET ?').bind(limit, offset).all()
+  return c.json(news.results)
+})
+
+app.get('/api/hot-tool', async (c) => {
+  const tool = await c.env.DB.prepare('SELECT * FROM hot_tools ORDER BY created_at DESC LIMIT 1').first()
+  return c.json(tool)
+})
+
+app.get('/privacy', (c) => {
+  return c.html('<div style="max-width:800px;margin:50px auto;line-height:1.8;padding:20px;"><h1>Privacy Policy</h1><p>JellyAI collects only email addresses for newsletter purposes.</p><a href="/">Home</a></div>')
+})
+
 app.post('/subscribe', async (c) => {
   const { email } = await c.req.parseBody()
   try {
     await c.env.DB.prepare('INSERT INTO subscribers (email) VALUES (?)').bind(email).run()
-    return c.text('구독해주셔서 감사합니다! 🐾')
-  } catch (e: any) {
-    if (e.message.includes('UNIQUE')) return c.text('이미 구독 중인 이메일입니다. 😊')
-    return c.text('오류 발생', 500)
-  }
+    return c.text('Subscription complete!')
+  } catch (e) { return c.text('Error') }
 })
 
-// 3. 최신 뉴스 조회 API
-app.get('/api/latest-news', async (c) => {
-  const news = await c.env.DB.prepare('SELECT * FROM news_summaries ORDER BY created_at DESC LIMIT 1').first()
-  return c.json(news)
-})
-
-// 4. 진짜 뉴스 수집 및 AI 요약 (Fetch & AI)
 app.get('/fetch-news', async (c) => {
   const feedUrl = RSS_FEEDS[Math.floor(Math.random() * RSS_FEEDS.length)]
-  
   try {
-    const res = await fetch(feedUrl)
-    const xml = await res.text()
-    
-    // 간단한 XML 파싱 (제목, 링크 추출)
+    const res = await fetch(feedUrl); const xml = await res.text()
     const itemMatch = xml.match(/<item>([\s\S]*?)<\/item>/)
-    if (!itemMatch) return c.text('기사를 찾을 수 없습니다.')
-    
+    if (!itemMatch) return c.text('No items')
     const item = itemMatch[1]
-    const title = item.match(/<title>(.*?)<\/title>/)?.[1].replace('<![CDATA[', '').replace(']]>', '') || '제목 없음'
+    const title = item.match(/<title>(.*?)<\/title>/)?.[1].replace('<![CDATA[', '').replace(']]>', '') || 'Untitled'
     const link = item.match(/<link>(.*?)<\/link>/)?.[1] || ''
-    const description = item.match(/<description>([\s\S]*?)<\/description>/)?.[1].replace(/<[^>]*>/g, '').substring(0, 500) || ''
-
-    // AI 요약 (한국어로 요약 요청)
-    const prompt = `Translate and summarize this AI news title and description into one concise Korean sentence: Title: ${title}, Description: ${description}`
-    const aiResponse = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', { prompt })
-    const summary = (aiResponse as any).response || title
-
-    // DB 저장 (중복 체크 없이 우선 저장)
-    await c.env.DB.prepare('INSERT INTO news_summaries (title, summary, url, category) VALUES (?, ?, ?, ?)')
-      .bind(title, summary, link, 'AI')
-      .run()
-
-    return c.json({ title, summary, link })
-  } catch (e: any) {
-    return c.text('Error: ' + e.message, 500)
-  }
+    const desc = item.match(/<description>([\s\S]*?)<\/description>/)?.[1].replace(/<[^>]*>/g, '').substring(0, 500) || ''
+    let imageUrl = item.match(/<media:content[^>]+url="([^"]+)"/)?.[1] || item.match(/<enclosure[^>]+url="([^"]+)"/)?.[1] || '';
+    const aiResponse = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', { prompt: `Summarize this in ONE concise Korean sentence AND ONE concise English sentence: ${title} - ${desc}` })
+    const responseText = (aiResponse as any).response || ''
+    const summaryKR = responseText.match(/KR: (.*?) \|/)?.[1] || title
+    const summaryEN = responseText.match(/EN: (.*?)$/)?.[1] || title
+    await c.env.DB.prepare('INSERT INTO news_summaries (title, summary, summary_en, url, image_url) VALUES (?, ?, ?, ?, ?)').bind(title, summaryKR, summaryEN, link, imageUrl).run()
+    return c.json({ title, summaryKR })
+  } catch (e: any) { return c.text(e.message) }
 })
 
 export default app
