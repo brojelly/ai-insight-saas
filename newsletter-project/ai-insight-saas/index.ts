@@ -146,6 +146,15 @@ app.get('/', (c) => {
                             <p id="subscribe-msg" class="text-xs text-center hidden"></p>
                         </div>
                     </div>
+                    
+                    <div class="bg-blue-600 rounded-[2rem] p-6 text-white shadow-xl shadow-blue-200">
+                        <h3 class="font-bold mb-2 flex items-center">
+                            <i class="fa-solid fa-bolt mr-2 text-yellow-300"></i> ${isKorea ? '빠른 소식' : 'Fast Track'}
+                        </h3>
+                        <p class="text-xs text-blue-100 leading-relaxed">
+                            ${isKorea ? 'JellyAI는 1시간마다 전세계 AI 뉴스를 자동으로 수집합니다.' : 'JellyAI automatically collects global AI news every hour.'}
+                        </p>
+                    </div>
                 </aside>
             </div>
         </main>
@@ -348,6 +357,10 @@ app.get('/fetch-news', async (c) => {
     await c.env.DB.prepare('INSERT INTO news_summaries (title, summary, summary_en, url, image_url) VALUES (?, ?, ?, ?, ?)').bind(title, summaryKR, summaryEN, finalLink, imageUrl).run()
     return c.json({ title, summaryKR })
   } catch (e: any) { return c.text(e.message) }
+})
+
+app.on('scheduled', async (event, env, ctx) => {
+  ctx.waitUntil(app.request('/fetch-news', {}, env));
 })
 
 export default app

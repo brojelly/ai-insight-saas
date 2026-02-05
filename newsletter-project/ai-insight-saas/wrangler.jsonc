@@ -15,5 +15,10 @@
       "database_name": "ai-insight-db",
       "database_id": "93147c2f-820a-424c-83e9-8f354dfb1689"
     }
-  ]
+  ],
+  "triggers": {
+    "crons": [
+      "0 * * * *"
+    ]
+  }
 }
