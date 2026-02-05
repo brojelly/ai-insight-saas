@@ -118,7 +118,7 @@ app.get('/', (c) => {
                 </div>
 
                 <!-- Sidebar Area -->
-                <aside class="w-full lg:w-80 space-y-8">
+                <aside class="w-full lg:w-80 space-y-8 flex-shrink-0">
                     <!-- Adsense Sidebar -->
                     <div class="bg-white rounded-[2rem] p-4 border border-slate-200 shadow-sm sticky top-24">
                         <p class="text-[10px] text-slate-400 mb-2 text-center uppercase tracking-widest">Advertisement</p>
@@ -145,15 +145,18 @@ app.get('/', (c) => {
                             </form>
                             <p id="subscribe-msg" class="text-xs text-center hidden"></p>
                         </div>
-                    </div>
-                    
-                    <div class="bg-blue-600 rounded-[2rem] p-6 text-white shadow-xl shadow-blue-200">
-                        <h3 class="font-bold mb-2 flex items-center">
-                            <i class="fa-solid fa-bolt mr-2 text-yellow-300"></i> ${isKorea ? '빠른 소식' : 'Fast Track'}
-                        </h3>
-                        <p class="text-xs text-blue-100 leading-relaxed">
-                            ${isKorea ? 'JellyAI는 1시간마다 전세계 AI 뉴스를 자동으로 수집합니다.' : 'JellyAI automatically collects global AI news every hour.'}
-                        </p>
+
+                        <hr class="my-8 border-slate-100">
+
+                        <!-- Fast Track Status Card -->
+                        <div class="bg-blue-600 rounded-3xl p-6 text-white shadow-xl shadow-blue-200">
+                            <h3 class="font-bold mb-2 flex items-center text-sm">
+                                <i class="fa-solid fa-bolt mr-2 text-yellow-300"></i> ${isKorea ? '실시간 자동화' : 'Auto-Sync'}
+                            </h3>
+                            <p class="text-[11px] text-blue-100 leading-relaxed">
+                                ${isKorea ? 'JellyAI는 1시간마다 전세계 핫 뉴스를 자동으로 수집하고 있습니다.' : 'JellyAI syncs global hot news every hour automatically.'}
+                            </p>
+                        </div>
                     </div>
                 </aside>
             </div>
