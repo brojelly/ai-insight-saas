@@ -215,7 +215,8 @@ app.get('/', (c) => {
                         data.forEach(n => {
                             const domain = new URL(n.url).hostname.replace('www.', '');
                             const card = document.createElement('div');
-                            card.className = "bg-white rounded-[2.5rem] border border-slate-200 shadow-sm card-hover overflow-hidden flex flex-col text-left";
+                            card.className = "bg-white rounded-[2.5rem] border border-slate-200 shadow-sm card-hover overflow-hidden flex flex-col text-left cursor-pointer transition-all active:scale-[0.98]";
+                            card.onclick = () => window.open(n.url, '_blank');
                             card.innerHTML = \`
                                 \${n.image_url ? \`<img src="\${n.image_url}" class="w-full h-48 object-cover" alt="news thumbnail">\` : \`<div class="w-full h-48 bg-slate-100 flex items-center justify-center text-slate-300"><i class="fa-solid fa-image text-4xl"></i></div>\`}
                                 <div class="p-8 flex-1 flex flex-col justify-between">
@@ -227,7 +228,7 @@ app.get('/', (c) => {
                                         <p class="text-slate-500 text-sm leading-relaxed mb-8 text-left">\${isKR ? n.summary : (n.summary_en || n.summary)}</p>
                                     </div>
                                     <div class="flex items-center justify-between mt-auto">
-                                        <a href="\${n.url}" target="_blank" class="text-xs font-bold text-blue-600 hover:underline text-left">VIEW ARTICLE &rarr;</a>
+                                        <span class="text-xs font-bold text-blue-600 hover:underline text-left">VIEW ARTICLE &rarr;</span>
                                         <span class="text-[10px] text-slate-400 font-medium">Global Insight</span>
                                     </div>
                                 </div>
