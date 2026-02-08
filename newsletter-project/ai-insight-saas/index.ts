@@ -451,11 +451,14 @@ app.get('/fetch-news', async (c) => {
     }
 
     const aiResponse = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', { 
-      prompt: `Task: Create a HIGH-IMPACT news briefing and classify it.
+      prompt: `Task: Create a HIGH-IMPACT, INSIGHTFUL news briefing.
       Instructions: 
-      1. Summarize the following into exactly ONE powerful Korean sentence and ONE English sentence.
-      2. Classify into one category: [Model, Business, Tools, Dev, General].
-      3. Rate importance from 1 to 5 (5 is world-changing news).
+      1. Role: Act as a world-class AI tech influencer (like @choi.openai). Focus on "Why this matters" or "The core impact on the industry".
+      2. Summarize the following into exactly ONE sharp, punchy Korean sentence and ONE English sentence.
+         - Avoid generic phrases like "In this article..." or "This news is...". 
+         - Use bold and confident language that cuts through the noise.
+      3. Classify into one category: [Model, Business, Tools, Dev, General].
+      4. Rate importance from 1 to 5 (5 is industry-shifting).
       Format: KR: [Summary] | EN: [Summary] | CAT: [Category] | IMP: [Importance]
       
       Title: ${title}
