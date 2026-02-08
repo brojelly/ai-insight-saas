@@ -366,6 +366,37 @@ app.get('/api/hot-tool', async (c) => {
   return c.json(tool)
 })
 
+app.get('/api/cleanup-duplicates', async (c) => {
+  try {
+    // 1. Identify duplicates by title (keep the newest one)
+    const result = await c.env.DB.prepare(`
+      DELETE FROM news_summaries 
+      WHERE id NOT IN (
+        SELECT MAX(id) 
+        FROM news_summaries 
+        GROUP BY title
+      )
+    `).run();
+    
+    // 2. Identify duplicates by URL (keep the newest one)
+    const result2 = await c.env.DB.prepare(`
+      DELETE FROM news_summaries 
+      WHERE id NOT IN (
+        SELECT MAX(id) 
+        FROM news_summaries 
+        GROUP BY url
+      )
+    `).run();
+
+    return c.json({ 
+      status: 'success', 
+      message: 'Duplicates cleaned up from database'
+    });
+  } catch (e: any) {
+    return c.text('Cleanup Error: ' + e.message);
+  }
+})
+
 app.get('/api/send-newsletter', async (c) => {
   // 1. Get Active Subscribers
   const subscribers = await c.env.DB.prepare('SELECT email FROM subscribers WHERE status = "active"').all();
@@ -411,6 +442,13 @@ app.get('/fetch-news', async (c) => {
     const item = itemMatch[1]
     const title = item.match(/<title>(.*?)<\/title>/)?.[1].replace('<![CDATA[', '').replace(']]>', '') || 'Untitled'
     
+    // 0. Quick Deduplication Check (Before AI Processing)
+    const quickLink = item.match(/<link>(.*?)<\/link>/)?.[1] || ''
+    const quickDuplicate = await c.env.DB.prepare('SELECT id FROM news_summaries WHERE url = ? OR title = ?').bind(quickLink, title).first();
+    if (quickDuplicate) {
+      return c.json({ status: 'skipped', reason: 'Duplicate (Quick Check)', title });
+    }
+
     // Filter out guides and non-news items
     const filterKeywords = ['how to', 'navigating', 'guide', 'update on', 'introducing', 'learning'];
     if (filterKeywords.some(k => title.toLowerCase().includes(k))) {
