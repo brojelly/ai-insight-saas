@@ -10,7 +10,6 @@ const app = new Hono<{ Bindings: Bindings }>()
 const ADSENSE_PUB_ID = 'ca-pub-9958230062150527';
 
 const RSS_FEEDS = [
-  { url: 'https://openai.com/news/rss.xml', weight: 3 },
   { url: 'https://anthropic.com/news/rss.xml', weight: 3 },
   { url: 'https://techcrunch.com/category/artificial-intelligence/feed/', weight: 2 },
   { url: 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml', weight: 2 },
@@ -20,6 +19,8 @@ const RSS_FEEDS = [
 ]
 
 app.get('/ads.txt', (c) => {
+  c.header('Content-Type', 'text/plain; charset=utf-8')
+  c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   return c.text(`google.com, ${ADSENSE_PUB_ID}, DIRECT, f08c47fec0942fa0`)
 })
 
@@ -52,7 +53,12 @@ app.get('/', (c) => {
                 <a href="/" class="text-2xl font-bold text-blue-600 flex items-center">
                     <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> JellyAI
                 </a>
-                <div class="hidden md:flex space-x-8 text-sm font-medium text-slate-600">
+                <div class="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-600">
+                    <div class="relative group">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors"></i>
+                        <input type="text" id="search-input" placeholder="${isKorea ? '뉴스 검색...' : 'Search news...'}" 
+                            class="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-48 md:w-64 outline-none">
+                    </div>
                     <a href="#news-grid" class="hover:text-blue-600 transition">${isKorea ? '실시간 뉴스' : 'Live News'}</a>
                     <a href="#hot-tool" class="hover:text-blue-600 transition">${isKorea ? '핫 AI 툴' : 'Hot AI Tool'}</a>
                     <a href="/privacy" class="hover:text-blue-600 transition">Privacy</a>
@@ -82,9 +88,18 @@ app.get('/', (c) => {
                 <!-- Main Content Area -->
                 <div class="flex-1">
                     <section id="news-grid" class="mb-24">
-                        <h2 class="text-2xl font-bold mb-10 flex items-center text-left">
-                            <i class="fa-solid fa-rss text-orange-400 mr-2"></i> ${isKorea ? '실시간 브리핑' : 'Global Briefing'}
-                        </h2>
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+                            <h2 class="text-2xl font-bold flex items-center text-left">
+                                <i class="fa-solid fa-rss text-orange-400 mr-2"></i> ${isKorea ? '실시간 브리핑' : 'Global Briefing'}
+                            </h2>
+                            <div id="category-filters" class="flex flex-wrap gap-2">
+                                <button onclick="filterCategory('All')" class="cat-btn active bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all">All</button>
+                                <button onclick="filterCategory('Model')" class="cat-btn bg-white text-slate-600 border border-slate-200 px-4 py-1.5 rounded-full text-xs font-bold hover:border-blue-500 transition-all">Model</button>
+                                <button onclick="filterCategory('Business')" class="cat-btn bg-white text-slate-600 border border-slate-200 px-4 py-1.5 rounded-full text-xs font-bold hover:border-blue-500 transition-all">Business</button>
+                                <button onclick="filterCategory('Tools')" class="cat-btn bg-white text-slate-600 border border-slate-200 px-4 py-1.5 rounded-full text-xs font-bold hover:border-blue-500 transition-all">Tools</button>
+                                <button onclick="filterCategory('Dev')" class="cat-btn bg-white text-slate-600 border border-slate-200 px-4 py-1.5 rounded-full text-xs font-bold hover:border-blue-500 transition-all">Dev</button>
+                            </div>
+                        </div>
                         <div id="news-container" class="grid grid-cols-1 md:grid-cols-2 gap-10"></div>
                         <div id="loading-spinner" class="py-12 justify-center items-center space-x-2">
                             <div class="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
@@ -204,38 +219,76 @@ app.get('/', (c) => {
                 }
             });
 
+            let currentCategory = 'All';
+
+            const filterCategory = (cat) => {
+                if (currentCategory === cat) return;
+                currentCategory = cat;
+                currentPage = 1;
+                hasMore = true;
+                document.getElementById('news-container').innerHTML = '';
+                
+                // Update UI
+                document.querySelectorAll('.cat-btn').forEach(btn => {
+                    if (btn.innerText === cat) {
+                        btn.className = "cat-btn active bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all";
+                    } else {
+                        btn.className = "cat-btn bg-white text-slate-600 border border-slate-200 px-4 py-1.5 rounded-full text-xs font-bold hover:border-blue-500 transition-all";
+                    }
+                });
+                
+                loadNews();
+            };
+
+            // Search Logic
+            let searchTimeout;
+            let currentSearch = '';
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    currentSearch = e.target.value;
+                    currentPage = 1;
+                    hasMore = true;
+                    document.getElementById('news-container').innerHTML = '';
+                    loadNews();
+                }, 500);
+            });
+
             const loadNews = async () => {
                 if (isLoading || !hasMore) return;
                 isLoading = true;
                 document.getElementById('loading-spinner').classList.add('active');
 
                 try {
-                    const res = await fetch(\`/api/list-news?page=\${currentPage}\`);
+                    const res = await fetch('/api/list-news?page=' + currentPage + '&category=' + currentCategory + '&q=' + currentSearch);
                     const data = await res.json();
                     
                     if (data && data.length > 0) {
                         const container = document.getElementById('news-container');
                         data.forEach(n => {
                             const domain = new URL(n.url).hostname.replace('www.', '');
+                            const isHot = n.importance >= 4;
                             const card = document.createElement('div');
                             card.className = "bg-white rounded-[2.5rem] border border-slate-200 shadow-sm card-hover overflow-hidden flex flex-col text-left cursor-pointer transition-all active:scale-[0.98]";
                             card.onclick = () => window.open(n.url, '_blank');
-                            card.innerHTML = \`
-                                \${n.image_url ? \`<img src="\${n.image_url}" class="w-full h-48 object-cover" alt="news thumbnail">\` : \`<div class="w-full h-48 bg-slate-100 flex items-center justify-center text-slate-300"><i class="fa-solid fa-image text-4xl"></i></div>\`}
-                                <div class="p-8 flex-1 flex flex-col justify-between">
-                                    <div>
-                                        <div class="flex items-center space-x-2 mb-4">
-                                            <span class="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider">\${domain}</span>
-                                        </div>
-                                        <h3 class="text-lg font-bold mb-4 leading-tight text-left">\${n.title}</h3>
-                                        <p class="text-slate-500 text-sm leading-relaxed mb-8 text-left">\${isKR ? n.summary : (n.summary_en || n.summary)}</p>
-                                    </div>
-                                    <div class="flex items-center justify-between mt-auto">
-                                        <span class="text-xs font-bold text-blue-600 hover:underline text-left">VIEW ARTICLE &rarr;</span>
-                                        <span class="text-[10px] text-slate-400 font-medium">Global Insight</span>
-                                    </div>
-                                </div>
-                            \`;
+                            card.innerHTML = '<div class="relative">' +
+                                    (n.image_url ? '<img src="' + n.image_url + '" class="w-full h-48 object-cover" alt="news thumbnail">' : '<div class="w-full h-48 bg-slate-100 flex items-center justify-center text-slate-300"><i class="fa-solid fa-image text-4xl"></i></div>') +
+                                    (isHot ? '<span class="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg uppercase tracking-tighter">🔥 HOT</span>' : '') +
+                                    '<span class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-slate-600 shadow-sm">' + (n.category || 'General') + '</span>' +
+                                '</div>' +
+                                '<div class="p-8 flex-1 flex flex-col justify-between">' +
+                                    '<div>' +
+                                        '<div class="flex items-center space-x-2 mb-4">' +
+                                            '<span class="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider">' + domain + '</span>' +
+                                        '</div>' +
+                                        '<h3 class="text-lg font-bold mb-4 leading-tight text-left">' + n.title + '</h3>' +
+                                        '<p class="text-slate-500 text-sm leading-relaxed mb-8 text-left">' + (isKR ? n.summary : (n.summary_en || n.summary)) + '</p>' +
+                                    '</div>' +
+                                    '<div class="flex items-center justify-between mt-auto">' +
+                                        '<span class="text-xs font-bold text-blue-600 hover:underline text-left">VIEW ARTICLE &rarr;</span>' +
+                                        '<span class="text-[10px] text-slate-400 font-medium">Global Insight</span>' +
+                                    '</div>' +
+                                '</div>';
                             container.appendChild(card);
                         });
                         currentPage++;
@@ -259,14 +312,12 @@ app.get('/', (c) => {
             // FIX: Tool Info Loading
             fetch('/api/hot-tool').then(r => r.json()).then(tool => {
                 if (tool) {
-                    document.getElementById('tool-info').innerHTML = \`
-                        <span class="bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-full uppercase tracking-widest italic">Today's Hot Tool</span>
-                        <h2 class="text-5xl font-black text-white text-left">\${tool.name}</h2>
-                        <p class="text-blue-100 text-lg leading-relaxed text-left">\${tool.description}</p>
-                        <a href="\${tool.link}" target="_blank" class="inline-block bg-white text-blue-900 px-8 py-4 rounded-2xl font-bold hover:bg-blue-50 transition shadow-xl text-left">
-                            \${isKR ? '지금 도구 보러가기' : 'Check out Tool'} <i class="fa-solid fa-external-link ml-2"></i>
-                        </a>
-                    \`;
+                    document.getElementById('tool-info').innerHTML = '<span class="bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-full uppercase tracking-widest italic">Today\\\'s Hot Tool</span>' +
+                        '<h2 class="text-5xl font-black text-white text-left">' + tool.name + '</h2>' +
+                        '<p class="text-blue-100 text-lg leading-relaxed text-left">' + tool.description + '</p>' +
+                        '<a href="' + tool.link + '" target="_blank" class="inline-block bg-white text-blue-900 px-8 py-4 rounded-2xl font-bold hover:bg-blue-50 transition shadow-xl text-left">' +
+                            (isKR ? '지금 도구 보러가기' : 'Check out Tool') + ' <i class="fa-solid fa-external-link ml-2"></i>' +
+                        '</a>';
                     document.getElementById('tool-how-to-content').innerHTML = tool.how_to;
                 }
             });
@@ -278,9 +329,33 @@ app.get('/', (c) => {
 
 app.get('/api/list-news', async (c) => {
   const page = parseInt(c.req.query('page') || '1');
+  const category = c.req.query('category');
+  const search = c.req.query('q');
   const limit = 12;
   const offset = (page - 1) * limit;
-  const news = await c.env.DB.prepare('SELECT * FROM news_summaries ORDER BY created_at DESC LIMIT ? OFFSET ?').bind(limit, offset).all()
+  
+  let query = 'SELECT * FROM news_summaries';
+  const conditions: string[] = [];
+  const params: any[] = [];
+  
+  if (category && category !== 'All') {
+    conditions.push('category = ?');
+    params.push(category);
+  }
+  
+  if (search) {
+    conditions.push('title LIKE ?');
+    params.push(`%${search}%`);
+  }
+  
+  if (conditions.length > 0) {
+    query += ' WHERE ' + conditions.join(' AND ');
+  }
+  
+  query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+  params.push(limit, offset);
+  
+  const news = await c.env.DB.prepare(query).bind(...params).all()
   return c.json(news.results)
 })
 
@@ -289,8 +364,22 @@ app.get('/api/hot-tool', async (c) => {
   return c.json(tool)
 })
 
-app.get('/privacy', (c) => {
-  return c.html('<div style="max-width:800px;margin:50px auto;line-height:1.8;padding:20px;"><h1>Privacy Policy</h1><p>JellyAI collects only email addresses for newsletter purposes.</p><a href="/">Home</a></div>')
+app.get('/api/send-newsletter', async (c) => {
+  // 1. Get Active Subscribers
+  const subscribers = await c.env.DB.prepare('SELECT email FROM subscribers WHERE status = "active"').all();
+  if (!subscribers.results.length) return c.json({ status: 'No subscribers' });
+
+  // 2. Get Top 5 Hot News from last 7 days
+  const hotNews = await c.env.DB.prepare('SELECT * FROM news_summaries WHERE created_at > datetime("now", "-7 days") ORDER BY importance DESC LIMIT 5').all();
+  if (!hotNews.results.length) return c.json({ status: 'No news to send' });
+
+  // Note: Actual email sending requires an API like Mailgun, SendGrid or Postmark.
+  // Here we return the summary that WOULD be sent.
+  return c.json({ 
+    message: 'Newsletter data prepared',
+    subscriberCount: subscribers.results.length,
+    newsSent: hotNews.results.map(n => n.title)
+  });
 })
 
 app.post('/subscribe', async (c) => {
@@ -330,24 +419,51 @@ app.get('/fetch-news', async (c) => {
     const desc = item.match(/<description>([\s\S]*?)<\/description>/)?.[1].replace(/<[^>]*>/g, '').substring(0, 500) || ''
     
     // Advanced Image Extraction
-    let imageUrl = item.match(/<media:content[^>]+url="([^"]+)"/)?.[1] || 
-                   item.match(/<enclosure[^>]+url="([^"]+)"/)?.[1] ||
-                   item.match(/<media:thumbnail[^>]+url="([^"]+)"/)?.[1] ||
-                   item.match(/<img[^>]+src="([^"]+)"/)?.[1] || '';
+    let imageUrl = '';
     
-    // Default fallback image related to AI news if missing
+    // 1. Try common RSS image tags
+    const mediaContent = item.match(/<media:content[^>]+url="([^"]+)"/)?.[1];
+    const enclosure = item.match(/<enclosure[^>]+url="([^"]+)"/)?.[1];
+    const mediaThumbnail = item.match(/<media:thumbnail[^>]+url="([^"]+)"/)?.[1];
+    const imgTag = item.match(/<img[^>]+src="([^"]+)"/)?.[1];
+    
+    imageUrl = mediaContent || enclosure || mediaThumbnail || imgTag || '';
+
+    // 2. If still empty, try to fetch the page and extract og:image
+    if (!imageUrl && link) {
+      try {
+        const pageRes = await fetch(link);
+        if (pageRes.ok) {
+          const html = await pageRes.text();
+          imageUrl = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/)?.[1] ||
+                     html.match(/<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"/)?.[1] || '';
+        }
+      } catch (e) {
+        console.error("Failed to fetch page for og:image", e);
+      }
+    }
+    
+    // 3. Final fallback image if all else fails
     if (!imageUrl) {
       imageUrl = `https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=800`;
     }
 
     const aiResponse = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', { 
-      prompt: `Task: Create a HIGH-IMPACT news briefing. Instructions: Summarize the following into exactly ONE powerful Korean sentence and ONE English sentence. Focus on the MOST SIGNIFICANT FACT. Do NOT repeat the title. Format: KR: [Summary] | EN: [Summary]
+      prompt: `Task: Create a HIGH-IMPACT news briefing and classify it.
+      Instructions: 
+      1. Summarize the following into exactly ONE powerful Korean sentence and ONE English sentence.
+      2. Classify into one category: [Model, Business, Tools, Dev, General].
+      3. Rate importance from 1 to 5 (5 is world-changing news).
+      Format: KR: [Summary] | EN: [Summary] | CAT: [Category] | IMP: [Importance]
+      
       Title: ${title}
       Description: ${desc}` 
     })
     const responseText = (aiResponse as any).response || ''
     const summaryKR = responseText.match(/KR: (.*?) \|/)?.[1] || title
-    const summaryEN = responseText.match(/EN: (.*?)$/)?.[1] || title
+    const summaryEN = responseText.match(/EN: (.*?) \|/)?.[1] || title
+    const category = responseText.match(/CAT: (.*?) \|/)?.[1] || 'General'
+    const importance = parseInt(responseText.match(/IMP: (\d+)/)?.[1] || '1')
     
     // Normalize URL and handle 404/invalid links
     let finalLink = link;
@@ -358,13 +474,18 @@ app.get('/fetch-news', async (c) => {
       finalLink = `${urlObj.protocol}//${urlObj.hostname}${link}`;
     }
 
-    await c.env.DB.prepare('INSERT INTO news_summaries (title, summary, summary_en, url, image_url) VALUES (?, ?, ?, ?, ?)').bind(title, summaryKR, summaryEN, finalLink, imageUrl).run()
-    return c.json({ title, summaryKR })
+    await c.env.DB.prepare('INSERT INTO news_summaries (title, summary, summary_en, url, image_url, category, importance) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(title, summaryKR, summaryEN, finalLink, imageUrl, category, importance).run()
+    return c.json({ title, summaryKR, category, importance })
   } catch (e: any) { return c.text(e.message) }
 })
 
-app.on('scheduled', async (event, env, ctx) => {
-  ctx.waitUntil(app.request('/fetch-news', {}, env));
-})
+const handler = {
+  async scheduled(event: any, env: any, ctx: any) {
+    ctx.waitUntil(app.fetch(new Request('https://jellyai.org/fetch-news'), env))
+  },
+  async fetch(request: Request, env: any, ctx: any) {
+    return app.fetch(request, env, ctx)
+  }
+}
 
-export default app
+export default handler
