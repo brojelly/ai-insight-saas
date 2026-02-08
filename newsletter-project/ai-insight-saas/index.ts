@@ -8,6 +8,7 @@ type Bindings = {
 const app = new Hono<{ Bindings: Bindings }>()
 
 const ADSENSE_PUB_ID = 'ca-pub-9958230062150527';
+const ADSENSE_ADS_TEXT_SNIPPET = 'google.com, pub-9958230062150527, DIRECT, f08c47fec0942fa0';
 
 const RSS_FEEDS = [
   { url: 'https://anthropic.com/news/rss.xml', weight: 3 },
@@ -21,7 +22,7 @@ const RSS_FEEDS = [
 app.get('/ads.txt', (c) => {
   c.header('Content-Type', 'text/plain; charset=utf-8')
   c.header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
-  return c.text(`google.com, ${ADSENSE_PUB_ID}, DIRECT, f08c47fec0942fa0`)
+  return c.text(ADSENSE_ADS_TEXT_SNIPPET)
 })
 
 app.get('/', (c) => {
@@ -38,6 +39,7 @@ app.get('/', (c) => {
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_PUB_ID}" crossorigin="anonymous"></script>
+        <meta name="google-adsense-account" content="ca-pub-9958230062150527">
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
             body { font-family: 'Pretendard', sans-serif; scroll-behavior: smooth; background-color: #f8fafc; }
